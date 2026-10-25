@@ -1,0 +1,1836 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>专注时光 - 学习时间记录</title>
+  
+  <!-- PWA 支持与图标 -->
+  <link rel="manifest" href="./manifest.json">
+  <link rel="icon" type="image/svg+xml" href="./icon-512.svg">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#4f46e5">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Vue 3 CDN -->
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <!-- Canvas Confetti 礼花特效 CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+            }
+          },
+          fontFamily: {
+            mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    [v-cloak] { display: none; }
+    .timer-digits {
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -0.05em;
+    }
+    @keyframes pulse-glow {
+      0%, 100% { opacity: 0.25; transform: scale(1); }
+      50% { opacity: 0.55; transform: scale(1.05); }
+    }
+    .animate-pulse-glow {
+      animation: pulse-glow 3s infinite ease-in-out;
+    }
+    @keyframes audio-bar {
+      0%, 100% { height: 4px; }
+      50% { height: 16px; }
+    }
+    .audio-bar-1 { animation: audio-bar 0.9s infinite ease-in-out 0.1s; }
+    .audio-bar-2 { animation: audio-bar 0.7s infinite ease-in-out 0.25s; }
+    .audio-bar-3 { animation: audio-bar 1.1s infinite ease-in-out 0.05s; }
+    
+    /* 隐藏水平滚动条但支持滚动 */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100 min-h-screen transition-colors duration-300 font-sans antialiased selection:bg-indigo-500 selection:text-white">
+  <div id="app" v-cloak class="min-h-screen flex flex-col justify-between">
+
+    <!-- 隐藏的导入备份文件输入框 -->
+    <input 
+      type="file" 
+      ref="fileInputRef" 
+      @change="handleImportFile" 
+      accept=".json" 
+      class="hidden" 
+    />
+
+    <!-- 顶部导航栏 -->
+    <header class="border-b border-slate-200/80 dark:border-slate-800/80 backdrop-blur sticky top-0 z-30 bg-white/70 dark:bg-slate-950/70">
+      <div class="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+          <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center text-white shadow-md shadow-indigo-500/20">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div>
+            <h1 class="text-base font-bold tracking-tight">专注时光</h1>
+            <p class="text-xs text-slate-400 dark:text-slate-500">学习时间流光纪</p>
+          </div>
+        </div>
+
+        <!-- 顶部功能按钮群 -->
+        <div class="flex items-center space-x-2">
+
+          <!-- 白噪音快捷开关 -->
+          <div class="relative">
+            <button 
+              @click="showSoundPanel = !showSoundPanel"
+              :class="[
+                'px-3 py-1.5 rounded-xl text-xs font-medium transition flex items-center space-x-2 border',
+                currentSound !== 'none'
+                  ? 'border-indigo-500/50 bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 shadow-sm'
+                  : 'border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+              ]">
+              <span v-if="currentSound !== 'none'" class="flex items-center space-x-0.5 h-4">
+                <span class="w-0.5 bg-indigo-500 rounded-full audio-bar-1"></span>
+                <span class="w-0.5 bg-indigo-500 rounded-full audio-bar-2"></span>
+                <span class="w-0.5 bg-indigo-500 rounded-full audio-bar-3"></span>
+              </span>
+              <svg v-else class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+              </svg>
+              <span>{{ currentSoundName }}</span>
+            </button>
+
+            <!-- 白噪音浮层面板 -->
+            <div 
+              v-if="showSoundPanel" 
+              class="absolute right-0 mt-2 w-72 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-2xl z-50 text-left">
+              <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+                <span class="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center space-x-1.5">
+                  <svg class="w-4 h-4 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                  </svg>
+                  <span>原生算法白噪音</span>
+                </span>
+                <button 
+                  v-if="currentSound !== 'none'"
+                  @click="stopSound" 
+                  class="text-xs text-rose-500 hover:underline">关闭声音</button>
+              </div>
+
+              <!-- 声音选项卡 -->
+              <div class="grid grid-cols-2 gap-2 mt-3">
+                <button 
+                  v-for="snd in soundOptions" 
+                  :key="snd.id"
+                  @click="selectSound(snd.id)"
+                  :class="[
+                    'px-3 py-2.5 rounded-xl text-xs font-medium text-left flex items-center space-x-2 border transition',
+                    currentSound === snd.id
+                      ? 'border-indigo-500 bg-indigo-50/70 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 font-semibold ring-1 ring-indigo-500/30'
+                      : 'border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/60 text-slate-600 dark:text-slate-400'
+                  ]">
+                  <span class="text-base">{{ snd.icon }}</span>
+                  <div class="truncate">
+                    <div>{{ snd.name }}</div>
+                  </div>
+                </button>
+              </div>
+
+              <!-- 音量滑块 -->
+              <div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
+                <div class="flex items-center justify-between text-xs text-slate-500 mb-1.5">
+                  <span>环境音量</span>
+                  <span>{{ Math.round(soundVolume * 100) }}%</span>
+                </div>
+                <input 
+                  type="range" 
+                  min="0" 
+                  max="1" 
+                  step="0.05" 
+                  v-model.number="soundVolume" 
+                  @input="onVolumeChange"
+                  class="w-full accent-indigo-600 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-lg cursor-pointer"
+                />
+              </div>
+            </div>
+          </div>
+
+          <!-- 全屏专注模式按钮 -->
+          <button 
+            @click="toggleFullscreen" 
+            title="沉浸全屏模式"
+            class="p-2 rounded-lg text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+            <svg v-if="!isFullscreen" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+            </svg>
+            <svg v-else class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+
+          <!-- 暗黑/明亮切换 -->
+          <button 
+            @click="toggleTheme" 
+            title="切换主题"
+            class="p-2 rounded-lg text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+            <svg v-if="isDark" class="w-5 h-5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+            </svg>
+            <svg v-else class="w-5 h-5 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- 主体区域 -->
+    <main class="max-w-5xl mx-auto px-4 py-6 flex-1 w-full space-y-6">
+
+      <!-- ================= 0. 今日目标进度横幅 ================= -->
+      <section class="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 sm:p-5 shadow-sm">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-2.5">
+          <div class="flex items-center space-x-2">
+            <span class="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 px-2 py-0.5 rounded-md">
+              🎯 今日学习目标
+            </span>
+            <span class="text-sm font-semibold text-slate-800 dark:text-slate-200">
+              {{ todayTotalTimeText }} / {{ dailyGoalHours }} 小时
+            </span>
+            <span v-if="todayGoalPercent >= 100" class="text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full flex items-center space-x-1">
+              <span>🎉 目标达成！</span>
+            </span>
+          </div>
+
+          <div class="flex items-center space-x-3 text-xs text-slate-400">
+            <span>达成率: <strong class="text-slate-700 dark:text-slate-300">{{ todayGoalPercent }}%</strong></span>
+            <button 
+              @click="promptSetGoal" 
+              class="text-indigo-600 dark:text-indigo-400 hover:underline flex items-center space-x-1">
+              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+              </svg>
+              <span>修改目标</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 进度条 -->
+        <div class="w-full h-2.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+          <div 
+            class="h-full bg-gradient-to-r from-indigo-500 via-violet-500 to-emerald-500 transition-all duration-500 rounded-full"
+            :style="{ width: Math.min(100, todayGoalPercent) + '%' }">
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 模式切换标签卡 (正向自由 vs 番茄钟) ================= -->
+      <div class="flex justify-center">
+        <div class="bg-slate-200/80 dark:bg-slate-900 p-1 rounded-2xl flex items-center space-x-1 border border-slate-200 dark:border-slate-800 shadow-inner">
+          <button 
+            @click="switchTimingMode('count_up')"
+            :disabled="timerStatus !== 'idle'"
+            :class="[
+              'px-5 py-2 rounded-xl text-xs font-semibold transition-all duration-200 flex items-center space-x-1.5',
+              timingMode === 'count_up'
+                ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-sm'
+                : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200',
+              timerStatus !== 'idle' ? 'opacity-50 cursor-not-allowed' : ''
+            ]">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span>⏱️ 正向自由计时</span>
+          </button>
+
+          <button 
+            @click="switchTimingMode('pomodoro')"
+            :disabled="timerStatus !== 'idle'"
+            :class="[
+              'px-5 py-2 rounded-xl text-xs font-semibold transition-all duration-200 flex items-center space-x-1.5',
+              timingMode === 'pomodoro'
+                ? 'bg-white dark:bg-slate-800 text-rose-600 dark:text-rose-400 shadow-sm'
+                : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200',
+              timerStatus !== 'idle' ? 'opacity-50 cursor-not-allowed' : ''
+            ]">
+            <span>🍅 番茄工作法</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- ================= 1. 核心计时器组件 ================= -->
+      <section class="relative bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-6 sm:p-10 shadow-xl shadow-slate-200/40 dark:shadow-none overflow-hidden transition-all">
+        
+        <!-- 运行时的背景柔光 -->
+        <div v-if="timerStatus === 'running'" 
+             :class="[
+               'absolute -inset-10 blur-3xl pointer-events-none animate-pulse-glow',
+               timingMode === 'pomodoro' ? 'bg-rose-500/10 dark:bg-rose-500/5' : 'bg-indigo-500/10 dark:bg-indigo-500/5'
+             ]">
+        </div>
+
+        <div class="relative z-10 flex flex-col items-center text-center">
+
+          <!-- 番茄钟专属阶段选项 -->
+          <div v-if="timingMode === 'pomodoro'" class="flex items-center gap-2 mb-6">
+            <button 
+              v-for="phase in pomodoroPhases" 
+              :key="phase.type"
+              :disabled="timerStatus !== 'idle'"
+              @click="setPomodoroPhase(phase.type, phase.minutes)"
+              :class="[
+                'px-3.5 py-1.5 rounded-full text-xs font-semibold transition border',
+                pomodoroType === phase.type
+                  ? 'border-rose-500 bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 ring-2 ring-rose-500/20 shadow-sm'
+                  : 'border-slate-200 dark:border-slate-800 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800/50',
+                timerStatus !== 'idle' ? 'opacity-60 cursor-not-allowed' : ''
+              ]">
+              <span>{{ phase.label }} ({{ phase.minutes }}分)</span>
+            </button>
+          </div>
+
+          <!-- 科目标签选择器 -->
+          <div class="flex flex-wrap items-center justify-center gap-2 mb-6">
+            <button 
+              v-for="cat in categories" 
+              :key="cat.id"
+              :disabled="timerStatus === 'running'"
+              @click="selectedCategory = cat.id"
+              :class="[
+                'px-4 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 flex items-center space-x-1.5 border',
+                selectedCategory === cat.id 
+                  ? 'border-indigo-500 bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 ring-2 ring-indigo-500/20 shadow-sm'
+                  : 'border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/50',
+                timerStatus === 'running' ? 'opacity-80 cursor-not-allowed' : 'cursor-pointer'
+              ]">
+              <span class="w-2 h-2 rounded-full" :style="{ backgroundColor: cat.color }"></span>
+              <span>{{ cat.name }}</span>
+            </button>
+
+            <!-- 添加分类按钮 -->
+            <button 
+              v-if="timerStatus === 'idle'"
+              @click="showAddCategoryModal = true"
+              title="添加新科目"
+              class="px-2.5 py-1.5 rounded-full text-xs text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 border border-dashed border-slate-300 dark:border-slate-700 hover:border-indigo-400 transition flex items-center">
+              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+              </svg>
+            </button>
+          </div>
+
+          <!-- 当前状态微徽章 -->
+          <div class="inline-flex items-center space-x-2 px-3.5 py-1 rounded-full text-xs font-medium mb-3 transition-colors"
+               :class="{
+                 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400': timerStatus === 'idle',
+                 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400 ring-1 ring-emerald-500/30': timerStatus === 'running',
+                 'bg-amber-50 text-amber-600 dark:bg-amber-950/50 dark:text-amber-400 ring-1 ring-amber-500/30': timerStatus === 'paused',
+               }">
+            <span class="w-2 h-2 rounded-full"
+                  :class="{
+                    'bg-slate-400': timerStatus === 'idle',
+                    'bg-emerald-500 animate-ping': timerStatus === 'running',
+                    'bg-amber-500': timerStatus === 'paused',
+                  }"></span>
+            <span>{{ statusText }}</span>
+          </div>
+
+          <!-- 超大数字时钟展示 -->
+          <div class="my-4 font-mono font-extrabold text-6xl sm:text-8xl tracking-tight timer-digits select-none text-slate-900 dark:text-white drop-shadow-sm">
+            <template v-if="timingMode === 'count_up'">
+              <span>{{ formattedTime.hours }}</span>
+              <span class="text-indigo-500 animate-pulse">:</span>
+              <span>{{ formattedTime.minutes }}</span>
+              <span class="text-indigo-500 animate-pulse">:</span>
+              <span>{{ formattedTime.seconds }}</span>
+            </template>
+            <template v-else>
+              <span>{{ pomodoroFormatted.minutes }}</span>
+              <span class="text-rose-500 animate-pulse">:</span>
+              <span>{{ pomodoroFormatted.seconds }}</span>
+            </template>
+          </div>
+
+          <!-- 番茄钟倒计时条 -->
+          <div v-if="timingMode === 'pomodoro'" class="w-full max-w-xs h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden my-2">
+            <div 
+              class="h-full bg-rose-500 transition-all duration-300" 
+              :style="{ width: pomodoroProgressPercent + '%' }">
+            </div>
+          </div>
+
+          <!-- 学习备注输入框 -->
+          <div class="w-full max-w-md my-4">
+            <input 
+              v-model="currentNote"
+              type="text" 
+              placeholder="记录此时在学什么？(如: 单词Unit 3 / 刷高数题...)" 
+              class="w-full px-4 py-2.5 text-sm bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 text-center placeholder:text-slate-400 transition"
+            />
+          </div>
+
+          <!-- 控制操作按键群 -->
+          <div class="flex items-center justify-center gap-4 mt-3">
+            <button 
+              v-if="timerStatus === 'idle'"
+              @click="startTimer" 
+              :class="[
+                'group relative inline-flex items-center justify-center px-8 py-3.5 text-base font-semibold text-white active:scale-95 rounded-2xl shadow-lg transition-all duration-200',
+                timingMode === 'pomodoro' 
+                  ? 'bg-rose-600 hover:bg-rose-700 shadow-rose-600/30' 
+                  : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-600/30'
+              ]">
+              <svg class="w-5 h-5 mr-2 -ml-1 transition group-hover:scale-110" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span>{{ timingMode === 'pomodoro' ? '开始番茄专注' : '开始自由专注' }}</span>
+            </button>
+
+            <!-- 运行中状态 -->
+            <template v-if="timerStatus === 'running'">
+              <button 
+                @click="pauseTimer" 
+                class="px-5 py-3 rounded-2xl font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 dark:text-amber-300 dark:hover:bg-amber-900/50 border border-amber-200 dark:border-amber-800/50 transition active:scale-95 flex items-center space-x-1.5">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>暂停</span>
+              </button>
+
+              <button 
+                @click="finishTimerManual" 
+                class="px-7 py-3 rounded-2xl font-semibold text-white bg-emerald-600 hover:bg-emerald-700 active:scale-95 shadow-lg shadow-emerald-600/30 transition flex items-center space-x-1.5">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+                <span>学完打卡</span>
+              </button>
+
+              <button 
+                @click="confirmDiscard" 
+                title="放弃本次记录"
+                class="p-3 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-2xl transition">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </button>
+            </template>
+
+            <!-- 暂停状态 -->
+            <template v-if="timerStatus === 'paused'">
+              <button 
+                @click="resumeTimer" 
+                :class="[
+                  'px-6 py-3 rounded-2xl font-semibold text-white active:scale-95 shadow-lg transition flex items-center space-x-1.5',
+                  timingMode === 'pomodoro' ? 'bg-rose-600 hover:bg-rose-700 shadow-rose-600/30' : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-600/30'
+                ]">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                </svg>
+                <span>继续</span>
+              </button>
+
+              <button 
+                @click="finishTimerManual" 
+                class="px-6 py-3 rounded-2xl font-semibold text-white bg-emerald-600 hover:bg-emerald-700 active:scale-95 shadow-lg shadow-emerald-600/30 transition flex items-center space-x-1.5">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+                <span>学完打卡</span>
+              </button>
+
+              <button 
+                @click="confirmDiscard" 
+                title="放弃本次记录"
+                class="p-3 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-2xl transition">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </button>
+            </template>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 2. GitHub 风格学习热力图 (打卡绿格子) ================= -->
+      <section class="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-5 sm:p-6 shadow-sm">
+        <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center space-x-3">
+            <h3 class="text-sm font-bold text-slate-800 dark:text-slate-200 flex items-center space-x-1.5">
+              <span>🌱 学习打卡热力图</span>
+            </h3>
+            <span class="text-xs text-slate-400">最近 16 周</span>
+          </div>
+
+          <!-- 连续打卡天数勋章 -->
+          <div class="flex items-center space-x-3 text-xs">
+            <div class="flex items-center space-x-1 bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 px-2.5 py-1 rounded-full border border-amber-200/60 dark:border-amber-800/50">
+              <span>🔥 连续打卡 <strong>{{ currentStreak }}</strong> 天</span>
+            </div>
+            <span class="text-slate-400 hidden sm:inline">最高连续 {{ longestStreak }} 天</span>
+          </div>
+        </div>
+
+        <!-- 格子展示区 (横向可滑) -->
+        <div class="overflow-x-auto pb-2 no-scrollbar">
+          <div class="inline-flex flex-col gap-1 min-w-full">
+            <div class="flex gap-1.5">
+              <!-- 星期提示列 -->
+              <div class="flex flex-col justify-between text-[10px] text-slate-400 pr-1 select-none h-[106px] py-0.5">
+                <span>周一</span>
+                <span>周三</span>
+                <span>周五</span>
+                <span>周日</span>
+              </div>
+
+              <!-- 周列表 (16周) -->
+              <div class="flex gap-1.5">
+                <div v-for="(week, wIdx) in heatmapWeeks" :key="wIdx" class="flex flex-col gap-1.5">
+                  <div 
+                    v-for="(day, dIdx) in week" 
+                    :key="dIdx"
+                    :class="[
+                      'w-3.5 h-3.5 rounded-sm transition-transform hover:scale-125 cursor-pointer relative group',
+                      getHeatmapColorClass(day.duration)
+                    ]"
+                    @click="activeHeatmapDay = day">
+                    <!-- Tooltip 悬浮提示 -->
+                    <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover:flex flex-col items-center z-40 pointer-events-none">
+                      <div class="bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 text-[10px] py-1 px-2 rounded shadow-lg whitespace-nowrap">
+                        {{ day.dateString }}: {{ formatDurationText(day.duration) }}
+                      </div>
+                      <div class="w-1.5 h-1.5 bg-slate-900 dark:bg-slate-100 rotate-45 -mt-1"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 图例说明 -->
+            <div class="flex items-center justify-end space-x-1.5 text-[10px] text-slate-400 mt-3 pt-2 border-t border-slate-100 dark:border-slate-800">
+              <span>更少</span>
+              <span class="w-2.5 h-2.5 rounded-sm bg-slate-100 dark:bg-slate-800"></span>
+              <span class="w-2.5 h-2.5 rounded-sm bg-emerald-200 dark:bg-emerald-900"></span>
+              <span class="w-2.5 h-2.5 rounded-sm bg-emerald-400 dark:bg-emerald-700"></span>
+              <span class="w-2.5 h-2.5 rounded-sm bg-emerald-500 dark:bg-emerald-500"></span>
+              <span class="w-2.5 h-2.5 rounded-sm bg-emerald-600 dark:bg-emerald-400"></span>
+              <span>更多</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 3. 统计看板卡片群 ================= -->
+      <section class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-5 shadow-sm">
+          <div class="flex items-center justify-between text-slate-400 mb-2">
+            <span class="text-xs font-medium">今日专注时长</span>
+            <svg class="w-4 h-4 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div class="text-2xl font-bold font-mono tracking-tight text-slate-900 dark:text-white">
+            {{ todayTotalTimeText }}
+          </div>
+          <p class="text-xs text-slate-400 mt-1">今日完成 {{ todayRecords.length }} 次专注</p>
+        </div>
+
+        <div class="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-5 shadow-sm">
+          <div class="flex items-center justify-between text-slate-400 mb-2">
+            <span class="text-xs font-medium">最近 7 天总计</span>
+            <svg class="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+          </div>
+          <div class="text-2xl font-bold font-mono tracking-tight text-slate-900 dark:text-white">
+            {{ weekTotalTimeText }}
+          </div>
+          <p class="text-xs text-slate-400 mt-1">坚持学习的每一天都算数</p>
+        </div>
+
+        <div class="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-5 shadow-sm">
+          <div class="flex items-center justify-between text-slate-400 mb-2">
+            <span class="text-xs font-medium">历史累计专注</span>
+            <svg class="w-4 h-4 text-violet-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+            </svg>
+          </div>
+          <div class="text-2xl font-bold font-mono tracking-tight text-slate-900 dark:text-white">
+            {{ allTimeTotalText }}
+          </div>
+          <p class="text-xs text-slate-400 mt-1">累计打卡 {{ records.length }} 次</p>
+        </div>
+      </section>
+
+      <!-- 科目分布条形图 -->
+      <section v-if="records.length > 0" class="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-5 sm:p-6 shadow-sm">
+        <h3 class="text-sm font-semibold mb-4 text-slate-700 dark:text-slate-300">📊 今日科目分布</h3>
+        <div v-if="todayRecords.length === 0" class="text-xs text-slate-400 py-3 text-center">今天还没有打卡记录，开始专注一次吧！</div>
+        <div v-else class="space-y-3">
+          <div class="w-full h-3 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 flex">
+            <div 
+              v-for="dist in todayCategoryDist" 
+              :key="dist.id"
+              :style="{ width: dist.percent + '%', backgroundColor: dist.color }"
+              class="h-full transition-all duration-500"
+              :title="`${dist.name}: ${dist.timeText} (${dist.percent}%)`">
+            </div>
+          </div>
+          <div class="flex flex-wrap gap-4 text-xs">
+            <div v-for="dist in todayCategoryDist" :key="dist.id" class="flex items-center space-x-1.5">
+              <span class="w-2.5 h-2.5 rounded-full" :style="{ backgroundColor: dist.color }"></span>
+              <span class="text-slate-600 dark:text-slate-400 font-medium">{{ dist.name }}</span>
+              <span class="font-mono text-slate-400">({{ dist.timeText }} · {{ dist.percent }}%)</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 4. 详细记录列表 + 手动补记 ================= -->
+      <section class="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-5 sm:p-6 shadow-sm">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
+          <div class="flex items-center space-x-2">
+            <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-300">📝 专注记录明细</h3>
+            <span class="text-xs bg-slate-100 dark:bg-slate-800 text-slate-500 px-2 py-0.5 rounded-full">{{ records.length }} 条</span>
+          </div>
+
+          <!-- 右侧操作组：补记、导入、导出、清空 -->
+          <div class="flex items-center flex-wrap gap-3 text-xs">
+            <button 
+              @click="showManualEntryModal = true"
+              class="px-3 py-1.5 rounded-xl bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 font-semibold transition flex items-center space-x-1">
+              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+              </svg>
+              <span>手动补记</span>
+            </button>
+            <button @click="triggerImportFile" class="text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400">导入备份</button>
+            <button @click="exportData" class="text-indigo-600 dark:text-indigo-400 hover:underline">导出备份</button>
+            <button v-if="records.length > 0" @click="confirmClearRecords" class="text-rose-500 hover:underline">清空记录</button>
+          </div>
+        </div>
+
+        <!-- 空状态 -->
+        <div v-if="records.length === 0" class="py-12 text-center text-slate-400">
+          <svg class="w-10 h-10 mx-auto mb-3 opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+          </svg>
+          <p class="text-sm">暂无学习记录，点击上方“开始专注”或“手动补记”吧</p>
+        </div>
+
+        <!-- 列表 -->
+        <div v-else class="divide-y divide-slate-100 dark:divide-slate-800/80">
+          <div 
+            v-for="record in sortedRecords" 
+            :key="record.id" 
+            class="py-3.5 flex items-center justify-between group hover:bg-slate-50/50 dark:hover:bg-slate-800/30 px-2 rounded-xl transition">
+            <div class="flex items-center space-x-3 min-w-0">
+              <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" :style="{ backgroundColor: getCategoryColor(record.categoryId) }"></span>
+              <div class="min-w-0">
+                <div class="flex items-center space-x-2">
+                  <span class="text-xs font-semibold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                    {{ getCategoryName(record.categoryId) }}
+                  </span>
+                  <span v-if="record.mode === 'pomodoro'" class="text-[10px] px-1.5 py-0.5 rounded bg-rose-50 text-rose-600 dark:bg-rose-950/60 dark:text-rose-300">
+                    番茄
+                  </span>
+                  <span v-if="record.isManual" class="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                    补记
+                  </span>
+                  <span class="text-xs text-slate-400">{{ formatTimestamp(record.timestamp) }}</span>
+                </div>
+                <p v-if="record.note" class="text-xs text-slate-500 dark:text-slate-400 mt-1 truncate">
+                  {{ record.note }}
+                </p>
+              </div>
+            </div>
+
+            <div class="flex items-center space-x-3">
+              <span class="font-mono text-sm font-bold text-slate-800 dark:text-slate-200">
+                {{ formatDurationText(record.durationSeconds) }}
+              </span>
+              <button 
+                @click="deleteRecord(record.id)" 
+                title="删除此条"
+                class="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-rose-500 p-1 rounded transition">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- ================= 弹窗1：手动补录学习时长 ================= -->
+    <div v-if="showManualEntryModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+      <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 max-w-sm w-full shadow-2xl">
+        <h3 class="text-base font-bold mb-4">手动补录学习记录</h3>
+        
+        <div class="space-y-4">
+          <!-- 选择科目 -->
+          <div>
+            <label class="block text-xs font-medium text-slate-500 mb-1">学习科目</label>
+            <select 
+              v-model="manualCategory" 
+              class="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/30">
+              <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
+            </select>
+          </div>
+
+          <!-- 选择日期 -->
+          <div>
+            <label class="block text-xs font-medium text-slate-500 mb-1">学习日期</label>
+            <input 
+              v-model="manualDate" 
+              type="date" 
+              class="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+            />
+          </div>
+
+          <!-- 输入学习时长 -->
+          <div>
+            <label class="block text-xs font-medium text-slate-500 mb-1">学习时长</label>
+            <div class="grid grid-cols-2 gap-2">
+              <div class="flex items-center space-x-1">
+                <input 
+                  v-model.number="manualHours" 
+                  type="number" 
+                  min="0" 
+                  placeholder="0"
+                  class="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/30 text-center"
+                />
+                <span class="text-xs text-slate-400">小时</span>
+              </div>
+              <div class="flex items-center space-x-1">
+                <input 
+                  v-model.number="manualMinutes" 
+                  type="number" 
+                  min="0" 
+                  max="59"
+                  placeholder="30"
+                  class="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/30 text-center"
+                />
+                <span class="text-xs text-slate-400">分钟</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 学习备注 -->
+          <div>
+            <label class="block text-xs font-medium text-slate-500 mb-1">学习备注 (选填)</label>
+            <input 
+              v-model="manualNote" 
+              type="text" 
+              placeholder="如：图书馆高数复习..." 
+              class="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+            />
+          </div>
+        </div>
+
+        <div class="flex justify-end space-x-2 mt-6">
+          <button 
+            @click="showManualEntryModal = false" 
+            class="px-4 py-2 text-xs font-medium rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800">
+            取消
+          </button>
+          <button 
+            @click="submitManualEntry" 
+            class="px-4 py-2 text-xs font-semibold rounded-xl text-white bg-indigo-600 hover:bg-indigo-700">
+            确认补记
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= 弹窗2：添加自定义科目分类 ================= -->
+    <div v-if="showAddCategoryModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+      <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 max-w-sm w-full shadow-2xl">
+        <h3 class="text-base font-bold mb-4">添加学习分类</h3>
+        
+        <div class="space-y-4">
+          <div>
+            <label class="block text-xs font-medium text-slate-500 mb-1">科目名称</label>
+            <input 
+              v-model="newCategoryName" 
+              type="text" 
+              placeholder="如：物理、考研背单词、吉他..." 
+              class="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+              @keyup.enter="addNewCategory"
+            />
+          </div>
+
+          <div>
+            <label class="block text-xs font-medium text-slate-500 mb-2">选择标识颜色</label>
+            <div class="flex items-center space-x-2">
+              <button 
+                v-for="color in presetColors" 
+                :key="color"
+                type="button"
+                @click="newCategoryColor = color"
+                class="w-7 h-7 rounded-full border-2 transition-transform"
+                :class="newCategoryColor === color ? 'scale-125 border-indigo-500 shadow' : 'border-transparent hover:scale-110'"
+                :style="{ backgroundColor: color }">
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex justify-end space-x-2 mt-6">
+          <button 
+            @click="showAddCategoryModal = false" 
+            class="px-4 py-2 text-xs font-medium rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800">
+            取消
+          </button>
+          <button 
+            @click="addNewCategory" 
+            :disabled="!newCategoryName.trim()"
+            class="px-4 py-2 text-xs font-semibold rounded-xl text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50">
+            确认添加
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 底部版权/提示 -->
+    <footer class="py-6 text-center text-xs text-slate-400 dark:text-slate-600 border-t border-slate-200/50 dark:border-slate-800/50">
+      <p>💡 支持 PWA：手机浏览器点击“添加到主屏幕”即可作为 App 使用 · 标签页标题实时同步</p>
+    </footer>
+
+  </div>
+
+  <script>
+    const { createApp, ref, computed, onMounted, onUnmounted, watch } = Vue;
+
+    // ==========================================
+    // 🎧 纯前端 Web Audio 算法白噪音引擎
+    // ==========================================
+    class AmbientSoundEngine {
+      constructor() {
+        this.ctx = null;
+        this.masterGain = null;
+        this.activeNodes = [];
+        this.currentSound = 'none';
+        this.volume = 0.5;
+        this.timer = null;
+      }
+
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          this.ctx = new AudioContext();
+          this.masterGain = this.ctx.createGain();
+          this.masterGain.gain.value = this.volume;
+          this.masterGain.connect(this.ctx.destination);
+        }
+        if (this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+
+      setVolume(val) {
+        this.volume = val;
+        if (this.masterGain && this.ctx) {
+          this.masterGain.gain.setValueAtTime(val, this.ctx.currentTime);
+        }
+      }
+
+      stop() {
+        if (this.timer) {
+          clearInterval(this.timer);
+          this.timer = null;
+        }
+        this.activeNodes.forEach(node => {
+          try {
+            if (node.stop) node.stop();
+            if (node.disconnect) node.disconnect();
+          } catch (e) {}
+        });
+        this.activeNodes = [];
+        this.currentSound = 'none';
+      }
+
+      createPinkNoiseBuffer(seconds = 5) {
+        const bufferSize = this.ctx.sampleRate * seconds;
+        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+        for (let i = 0; i < bufferSize; i++) {
+          const white = Math.random() * 2 - 1;
+          b0 = 0.99886 * b0 + white * 0.0555179;
+          b1 = 0.99332 * b1 + white * 0.0750759;
+          b2 = 0.96900 * b2 + white * 0.1538520;
+          b3 = 0.86650 * b3 + white * 0.3104856;
+          b4 = 0.55000 * b4 + white * 0.5329522;
+          b5 = -0.7616 * b5 - white * 0.0168980;
+          data[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362) * 0.11;
+          b6 = white * 0.115926;
+        }
+        return buffer;
+      }
+
+      playRain() {
+        this.init();
+        this.stop();
+        this.currentSound = 'rain';
+
+        const buffer = this.createPinkNoiseBuffer(4);
+        const source = this.ctx.createBufferSource();
+        source.buffer = buffer;
+        source.loop = true;
+
+        const lowpass = this.ctx.createBiquadFilter();
+        lowpass.type = 'lowpass';
+        lowpass.frequency.value = 1000;
+
+        const bandpass = this.ctx.createBiquadFilter();
+        bandpass.type = 'bandpass';
+        bandpass.frequency.value = 750;
+        bandpass.Q.value = 0.7;
+
+        source.connect(lowpass);
+        lowpass.connect(bandpass);
+        bandpass.connect(this.masterGain);
+
+        source.start();
+        this.activeNodes.push(source, lowpass, bandpass);
+      }
+
+      playOcean() {
+        this.init();
+        this.stop();
+        this.currentSound = 'ocean';
+
+        const buffer = this.createPinkNoiseBuffer(6);
+        const source = this.ctx.createBufferSource();
+        source.buffer = buffer;
+        source.loop = true;
+
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.value = 400;
+
+        const lfo = this.ctx.createOscillator();
+        lfo.frequency.value = 0.14;
+        const lfoGain = this.ctx.createGain();
+        lfoGain.gain.value = 350;
+
+        lfo.connect(lfoGain);
+        lfoGain.connect(filter.frequency);
+
+        source.connect(filter);
+        filter.connect(this.masterGain);
+
+        source.start();
+        lfo.start();
+        this.activeNodes.push(source, filter, lfo, lfoGain);
+      }
+
+      playCampfire() {
+        this.init();
+        this.stop();
+        this.currentSound = 'campfire';
+
+        const buffer = this.createPinkNoiseBuffer(4);
+        const source = this.ctx.createBufferSource();
+        source.buffer = buffer;
+        source.loop = true;
+
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.value = 450;
+
+        source.connect(filter);
+        filter.connect(this.masterGain);
+        source.start();
+        this.activeNodes.push(source, filter);
+
+        const triggerCrackle = () => {
+          if (this.currentSound !== 'campfire' || !this.ctx) return;
+          const osc = this.ctx.createOscillator();
+          const g = this.ctx.createGain();
+          osc.type = 'square';
+          osc.frequency.setValueAtTime(120 + Math.random() * 400, this.ctx.currentTime);
+          
+          g.gain.setValueAtTime(0.08 + Math.random() * 0.15, this.ctx.currentTime);
+          g.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + 0.05);
+
+          osc.connect(g);
+          g.connect(this.masterGain);
+          osc.start();
+          osc.stop(this.ctx.currentTime + 0.06);
+        };
+
+        this.timer = setInterval(() => {
+          if (Math.random() > 0.45) triggerCrackle();
+        }, 300);
+      }
+
+      playBrownNoise() {
+        this.init();
+        this.stop();
+        this.currentSound = 'brown';
+
+        const bufferSize = this.ctx.sampleRate * 4;
+        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        let lastOut = 0.0;
+        for (let i = 0; i < bufferSize; i++) {
+          const white = Math.random() * 2 - 1;
+          data[i] = (lastOut + (0.02 * white)) / 1.02;
+          lastOut = data[i];
+          data[i] *= 3.5;
+        }
+
+        const source = this.ctx.createBufferSource();
+        source.buffer = buffer;
+        source.loop = true;
+
+        source.connect(this.masterGain);
+        source.start();
+        this.activeNodes.push(source);
+      }
+
+      playChime() {
+        this.init();
+        const now = this.ctx.currentTime;
+        const notes = [523.25, 659.25, 783.99, 1046.50];
+        notes.forEach((freq, idx) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, now + idx * 0.12);
+
+          gain.gain.setValueAtTime(0.2, now + idx * 0.12);
+          gain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.12 + 2.5);
+
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+
+          osc.start(now + idx * 0.12);
+          osc.stop(now + idx * 0.12 + 2.6);
+        });
+      }
+    }
+
+    const soundEngine = new AmbientSoundEngine();
+
+    // ==========================================
+    // Vue 3 应用主逻辑
+    // ==========================================
+    createApp({
+      setup() {
+        // 主题模式
+        const isDark = ref(false);
+        const toggleTheme = () => {
+          isDark.value = !isDark.value;
+          if (isDark.value) {
+            document.documentElement.classList.add('dark');
+            localStorage.setItem('focus_theme', 'dark');
+          } else {
+            document.documentElement.classList.remove('dark');
+            localStorage.setItem('focus_theme', 'light');
+          }
+        };
+
+        // 全屏模式
+        const isFullscreen = ref(false);
+        const toggleFullscreen = () => {
+          if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen().catch(() => {});
+            isFullscreen.value = true;
+          } else {
+            if (document.exitFullscreen) {
+              document.exitFullscreen();
+              isFullscreen.value = false;
+            }
+          }
+        };
+
+        // ================= 今日学习目标 =================
+        const dailyGoalHours = ref(Number(localStorage.getItem('focus_daily_goal_hours')) || 4);
+        const promptSetGoal = () => {
+          const input = prompt('设置每天的学习目标时长（小时）：', dailyGoalHours.value);
+          if (input !== null) {
+            const num = parseFloat(input);
+            if (!isNaN(num) && num > 0) {
+              dailyGoalHours.value = num;
+              localStorage.setItem('focus_daily_goal_hours', num);
+            }
+          }
+        };
+
+        // ================= 白噪音设置 =================
+        const showSoundPanel = ref(false);
+        const currentSound = ref('none');
+        const soundVolume = ref(0.5);
+
+        const soundOptions = [
+          { id: 'rain', name: '细雨微濛', icon: '🌧️' },
+          { id: 'ocean', name: '慢潮海浪', icon: '🌊' },
+          { id: 'campfire', name: '温暖篝火', icon: '🔥' },
+          { id: 'brown', name: '深度褐噪', icon: '☕' }
+        ];
+
+        const currentSoundName = computed(() => {
+          const s = soundOptions.find(o => o.id === currentSound.value);
+          return s ? `${s.icon} ${s.name}` : '白噪音伴侣';
+        });
+
+        const selectSound = (id) => {
+          if (currentSound.value === id) {
+            stopSound();
+            return;
+          }
+          currentSound.value = id;
+          if (id === 'rain') soundEngine.playRain();
+          else if (id === 'ocean') soundEngine.playOcean();
+          else if (id === 'campfire') soundEngine.playCampfire();
+          else if (id === 'brown') soundEngine.playBrownNoise();
+        };
+
+        const stopSound = () => {
+          soundEngine.stop();
+          currentSound.value = 'none';
+        };
+
+        const onVolumeChange = () => {
+          soundEngine.setVolume(soundVolume.value);
+        };
+
+        // ================= 计时器模式切换 =================
+        const timingMode = ref(localStorage.getItem('focus_timing_mode') || 'count_up');
+        const switchTimingMode = (mode) => {
+          if (timerStatus.value !== 'idle') return;
+          timingMode.value = mode;
+          localStorage.setItem('focus_timing_mode', mode);
+          if (mode === 'pomodoro') {
+            resetPomodoroCountdown();
+          } else {
+            elapsedSeconds.value = 0;
+          }
+        };
+
+        // 番茄钟配置
+        const pomodoroMinutes = ref(25);
+        const pomodoroType = ref('focus');
+        const pomodoroRemainingSeconds = ref(25 * 60);
+
+        const pomodoroPhases = [
+          { type: 'focus', minutes: 25, label: '专注' },
+          { type: 'focus_45', minutes: 45, label: '长专注' },
+          { type: 'short_break', minutes: 5, label: '短休' },
+          { type: 'long_break', minutes: 15, label: '长休' }
+        ];
+
+        const setPomodoroPhase = (type, minutes) => {
+          if (timerStatus.value !== 'idle') return;
+          pomodoroType.value = type;
+          pomodoroMinutes.value = minutes;
+          pomodoroRemainingSeconds.value = minutes * 60;
+        };
+
+        const resetPomodoroCountdown = () => {
+          pomodoroRemainingSeconds.value = pomodoroMinutes.value * 60;
+        };
+
+        const pomodoroFormatted = computed(() => {
+          const totalSec = pomodoroRemainingSeconds.value;
+          const m = Math.floor(totalSec / 60);
+          const s = totalSec % 60;
+          return {
+            minutes: String(m).padStart(2, '0'),
+            seconds: String(s).padStart(2, '0')
+          };
+        });
+
+        const pomodoroProgressPercent = computed(() => {
+          const total = pomodoroMinutes.value * 60;
+          if (total <= 0) return 0;
+          const done = total - pomodoroRemainingSeconds.value;
+          return Math.min(100, Math.max(0, (done / total) * 100));
+        });
+
+        // ================= 分类管理 =================
+        const defaultCategories = [
+          { id: 'dev', name: '💻 编程开发', color: '#6366f1' },
+          { id: 'en', name: '📖 英语精读', color: '#10b981' },
+          { id: 'math', name: '📐 高数/理科', color: '#f59e0b' },
+          { id: 'read', name: '📚 自由阅读', color: '#ec4899' },
+          { id: 'other', name: '☕ 其它自律', color: '#8b5cf6' },
+        ];
+        const categories = ref(JSON.parse(localStorage.getItem('focus_categories')) || defaultCategories);
+        const selectedCategory = ref(categories.value[0]?.id || 'dev');
+
+        const showAddCategoryModal = ref(false);
+        const newCategoryName = ref('');
+        const presetColors = ['#6366f1', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6', '#3b82f6', '#14b8a6', '#f43f5e'];
+        const newCategoryColor = ref(presetColors[0]);
+
+        const addNewCategory = () => {
+          if (!newCategoryName.value.trim()) return;
+          const newCat = {
+            id: 'cat_' + Date.now(),
+            name: newCategoryName.value.trim(),
+            color: newCategoryColor.value
+          };
+          categories.value.push(newCat);
+          selectedCategory.value = newCat.id;
+          localStorage.setItem('focus_categories', JSON.stringify(categories.value));
+          newCategoryName.value = '';
+          showAddCategoryModal.value = false;
+        };
+
+        // ================= 计时引擎 =================
+        const timerStatus = ref('idle');
+        const elapsedSeconds = ref(0);
+        const currentNote = ref('');
+        let timerInterval = null;
+        let lastTimestamp = 0;
+
+        const formattedTime = computed(() => {
+          const totalSec = elapsedSeconds.value;
+          const h = Math.floor(totalSec / 3600);
+          const m = Math.floor((totalSec % 3600) / 60);
+          const s = totalSec % 60;
+          return {
+            hours: String(h).padStart(2, '0'),
+            minutes: String(m).padStart(2, '0'),
+            seconds: String(s).padStart(2, '0')
+          };
+        });
+
+        const statusText = computed(() => {
+          if (timingMode.value === 'pomodoro') {
+            if (timerStatus.value === 'running') return '🍅 番茄专注倒计时中...';
+            if (timerStatus.value === 'paused') return '🍅 番茄已暂停';
+            return '🍅 准备开始番茄时钟';
+          } else {
+            if (timerStatus.value === 'running') return '⏱️ 正向专注计时中...';
+            if (timerStatus.value === 'paused') return '已暂停专注';
+            return '准备开始正向专注';
+          }
+        });
+
+        // 标签页标题实时同步
+        const updateDocumentTitle = () => {
+          const currentCat = categories.value.find(c => c.id === selectedCategory.value)?.name || '学习';
+          if (timerStatus.value === 'running') {
+            if (timingMode.value === 'pomodoro') {
+              document.title = `(${pomodoroFormatted.value.minutes}:${pomodoroFormatted.value.seconds}) 🍅 ${currentCat} · 专注时光`;
+            } else {
+              document.title = `(${formattedTime.value.hours}:${formattedTime.value.minutes}:${formattedTime.value.seconds}) ⏱️ ${currentCat} · 专注时光`;
+            }
+          } else if (timerStatus.value === 'paused') {
+            document.title = `[已暂停] ${currentCat} · 专注时光`;
+          } else {
+            document.title = '专注时光 - 学习时间记录';
+          }
+        };
+
+        const startTimer = () => {
+          timerStatus.value = 'running';
+          lastTimestamp = Date.now();
+          saveActiveSession();
+          updateDocumentTitle();
+          timerInterval = setInterval(tick, 1000);
+        };
+
+        const tick = () => {
+          const now = Date.now();
+          const diff = Math.floor((now - lastTimestamp) / 1000);
+          if (diff >= 1) {
+            lastTimestamp = now;
+            if (timingMode.value === 'count_up') {
+              elapsedSeconds.value += diff;
+            } else {
+              elapsedSeconds.value += diff;
+              pomodoroRemainingSeconds.value = Math.max(0, pomodoroRemainingSeconds.value - diff);
+              if (pomodoroRemainingSeconds.value === 0) {
+                onPomodoroCompleted();
+                return;
+              }
+            }
+            updateDocumentTitle();
+            saveActiveSession();
+          }
+        };
+
+        const pauseTimer = () => {
+          timerStatus.value = 'paused';
+          clearInterval(timerInterval);
+          updateDocumentTitle();
+          saveActiveSession();
+        };
+
+        const resumeTimer = () => {
+          timerStatus.value = 'running';
+          lastTimestamp = Date.now();
+          saveActiveSession();
+          updateDocumentTitle();
+          timerInterval = setInterval(tick, 1000);
+        };
+
+        const confirmDiscard = () => {
+          if (confirm('确定要放弃本次计时吗？未打卡的时长将不会被记录。')) {
+            resetTimer();
+          }
+        };
+
+        const resetTimer = () => {
+          clearInterval(timerInterval);
+          timerStatus.value = 'idle';
+          elapsedSeconds.value = 0;
+          currentNote.value = '';
+          if (timingMode.value === 'pomodoro') {
+            resetPomodoroCountdown();
+          }
+          updateDocumentTitle();
+          localStorage.removeItem('focus_active_session');
+        };
+
+        const saveActiveSession = () => {
+          const session = {
+            timingMode: timingMode.value,
+            timerStatus: timerStatus.value,
+            elapsedSeconds: elapsedSeconds.value,
+            pomodoroRemainingSeconds: pomodoroRemainingSeconds.value,
+            pomodoroMinutes: pomodoroMinutes.value,
+            selectedCategory: selectedCategory.value,
+            currentNote: currentNote.value,
+            lastTimestamp: Date.now()
+          };
+          localStorage.setItem('focus_active_session', JSON.stringify(session));
+        };
+
+        const restoreActiveSession = () => {
+          const saved = localStorage.getItem('focus_active_session');
+          if (saved) {
+            try {
+              const data = JSON.parse(saved);
+              timingMode.value = data.timingMode || 'count_up';
+              selectedCategory.value = data.selectedCategory || selectedCategory.value;
+              currentNote.value = data.currentNote || '';
+              pomodoroMinutes.value = data.pomodoroMinutes || 25;
+
+              const awaySeconds = Math.floor((Date.now() - data.lastTimestamp) / 1000);
+
+              if (data.timerStatus === 'running') {
+                if (timingMode.value === 'count_up') {
+                  elapsedSeconds.value = (data.elapsedSeconds || 0) + (awaySeconds > 0 ? awaySeconds : 0);
+                } else {
+                  elapsedSeconds.value = (data.elapsedSeconds || 0) + (awaySeconds > 0 ? awaySeconds : 0);
+                  const rem = (data.pomodoroRemainingSeconds || 0) - (awaySeconds > 0 ? awaySeconds : 0);
+                  pomodoroRemainingSeconds.value = Math.max(0, rem);
+                }
+                startTimer();
+              } else if (data.timerStatus === 'paused') {
+                elapsedSeconds.value = data.elapsedSeconds || 0;
+                pomodoroRemainingSeconds.value = data.pomodoroRemainingSeconds || 0;
+                timerStatus.value = 'paused';
+                updateDocumentTitle();
+              }
+            } catch (e) {
+              console.error(e);
+            }
+          }
+        };
+
+        // ================= 记录与完成打卡 =================
+        const records = ref(JSON.parse(localStorage.getItem('focus_records')) || []);
+
+        const triggerCelebration = () => {
+          soundEngine.playChime();
+          if (window.confetti) {
+            window.confetti({
+              particleCount: 85,
+              spread: 75,
+              origin: { y: 0.6 }
+            });
+          }
+        };
+
+        const onPomodoroCompleted = () => {
+          clearInterval(timerInterval);
+          triggerCelebration();
+
+          const duration = elapsedSeconds.value;
+          const newRecord = {
+            id: 'rec_' + Date.now(),
+            categoryId: selectedCategory.value,
+            durationSeconds: duration,
+            mode: 'pomodoro',
+            note: currentNote.value.trim() || '完成番茄钟专注',
+            timestamp: Date.now()
+          };
+
+          records.value.unshift(newRecord);
+          localStorage.setItem('focus_records', JSON.stringify(records.value));
+          resetTimer();
+          alert('🎉 恭喜你！番茄专注时间已到，休息一下眼睛吧~');
+        };
+
+        const finishTimerManual = () => {
+          if (elapsedSeconds.value < 5) {
+            alert('专注时间小于 5 秒，不作记录哦~ 建议专心学一会儿再打卡！');
+            return;
+          }
+
+          triggerCelebration();
+
+          const newRecord = {
+            id: 'rec_' + Date.now(),
+            categoryId: selectedCategory.value,
+            durationSeconds: elapsedSeconds.value,
+            mode: timingMode.value,
+            note: currentNote.value.trim(),
+            timestamp: Date.now()
+          };
+
+          records.value.unshift(newRecord);
+          localStorage.setItem('focus_records', JSON.stringify(records.value));
+          resetTimer();
+        };
+
+        // ================= 手动补记时长 =================
+        const showManualEntryModal = ref(false);
+        const manualCategory = ref(categories.value[0]?.id || 'dev');
+        const manualDate = ref(new Date().toISOString().slice(0, 10));
+        const manualHours = ref(1);
+        const manualMinutes = ref(0);
+        const manualNote = ref('');
+
+        const submitManualEntry = () => {
+          const totalSec = ((manualHours.value || 0) * 3600) + ((manualMinutes.value || 0) * 60);
+          if (totalSec <= 0) {
+            alert('请输入大于 0 的有效学习时长！');
+            return;
+          }
+
+          // 解析日期并设为当天中午 12:00
+          const [y, m, d] = manualDate.value.split('-').map(Number);
+          const recordDate = new Date(y, m - 1, d, 12, 0, 0);
+
+          const newRecord = {
+            id: 'rec_' + Date.now(),
+            categoryId: manualCategory.value,
+            durationSeconds: totalSec,
+            mode: 'manual',
+            isManual: true,
+            note: manualNote.value.trim(),
+            timestamp: recordDate.getTime()
+          };
+
+          records.value.unshift(newRecord);
+          localStorage.setItem('focus_records', JSON.stringify(records.value));
+          showManualEntryModal.value = false;
+          manualNote.value = '';
+          triggerCelebration();
+        };
+
+        const deleteRecord = (id) => {
+          if (confirm('确认删除这条学习记录吗？')) {
+            records.value = records.value.filter(r => r.id !== id);
+            localStorage.setItem('focus_records', JSON.stringify(records.value));
+          }
+        };
+
+        const confirmClearRecords = () => {
+          if (confirm('确定要清空所有历史学习记录吗？建议先点击“导出备份”做个备份。')) {
+            records.value = [];
+            localStorage.removeItem('focus_records');
+          }
+        };
+
+        // ================= 导入 & 导出备份 =================
+        const fileInputRef = ref(null);
+        const triggerImportFile = () => {
+          if (fileInputRef.value) fileInputRef.value.click();
+        };
+
+        const handleImportFile = (e) => {
+          const file = e.target.files[0];
+          if (!file) return;
+
+          const reader = new FileReader();
+          reader.onload = (evt) => {
+            try {
+              const data = JSON.parse(evt.target.result);
+              if (Array.isArray(data.records)) {
+                const isMerge = confirm('检测到备份数据！\n点击【确定】合并已有数据，点击【取消】完全覆盖当前数据。');
+                if (isMerge) {
+                  const existingIds = new Set(records.value.map(r => r.id));
+                  const newItems = data.records.filter(r => !existingIds.has(r.id));
+                  records.value = [...newItems, ...records.value];
+                } else {
+                  records.value = data.records;
+                }
+                if (Array.isArray(data.categories) && data.categories.length > 0) {
+                  categories.value = data.categories;
+                  localStorage.setItem('focus_categories', JSON.stringify(categories.value));
+                }
+                localStorage.setItem('focus_records', JSON.stringify(records.value));
+                alert(`成功导入 ${data.records.length} 条记录！`);
+              } else {
+                alert('备份文件格式不正确！');
+              }
+            } catch (err) {
+              alert('解析备份文件失败：' + err.message);
+            }
+          };
+          reader.readAsText(file);
+          e.target.value = '';
+        };
+
+        const exportData = () => {
+          const exportObj = {
+            categories: categories.value,
+            records: records.value,
+            dailyGoalHours: dailyGoalHours.value,
+            exportDate: new Date().toISOString()
+          };
+          const blob = new Blob([JSON.stringify(exportObj, null, 2)], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `专注时光备份_${new Date().toISOString().slice(0, 10)}.json`;
+          a.click();
+          URL.revokeObjectURL(url);
+        };
+
+        // ================= 统计计算 =================
+        const sortedRecords = computed(() => {
+          return [...records.value].sort((a, b) => b.timestamp - a.timestamp);
+        });
+
+        const isToday = (ts) => {
+          const d = new Date(ts);
+          const today = new Date();
+          return d.getFullYear() === today.getFullYear() &&
+                 d.getMonth() === today.getMonth() &&
+                 d.getDate() === today.getDate();
+        };
+
+        const todayRecords = computed(() => {
+          return records.value.filter(r => isToday(r.timestamp));
+        });
+
+        const todayTotalSeconds = computed(() => {
+          return todayRecords.value.reduce((acc, cur) => acc + cur.durationSeconds, 0);
+        });
+
+        const todayGoalPercent = computed(() => {
+          const targetSec = dailyGoalHours.value * 3600;
+          if (targetSec <= 0) return 100;
+          return Math.round((todayTotalSeconds.value / targetSec) * 100);
+        });
+
+        const formatDurationText = (sec) => {
+          if (!sec || sec < 60) return `${sec || 0}秒`;
+          const m = Math.floor(sec / 60);
+          const s = sec % 60;
+          if (m < 60) {
+            return s > 0 ? `${m}分${s}秒` : `${m}分钟`;
+          }
+          const h = Math.floor(m / 60);
+          const remM = m % 60;
+          return remM > 0 ? `${h}小时${remM}分` : `${h}小时整`;
+        };
+
+        const todayTotalTimeText = computed(() => {
+          return formatDurationText(todayTotalSeconds.value);
+        });
+
+        const weekTotalTimeText = computed(() => {
+          const now = Date.now();
+          const sevenDaysAgo = now - 7 * 24 * 3600 * 1000;
+          const weekRecords = records.value.filter(r => r.timestamp >= sevenDaysAgo);
+          const totalSec = weekRecords.reduce((acc, cur) => acc + cur.durationSeconds, 0);
+          return formatDurationText(totalSec);
+        });
+
+        const allTimeTotalText = computed(() => {
+          const totalSec = records.value.reduce((acc, cur) => acc + cur.durationSeconds, 0);
+          return formatDurationText(totalSec);
+        });
+
+        const todayCategoryDist = computed(() => {
+          const catMap = {};
+          let totalSec = 0;
+          todayRecords.value.forEach(r => {
+            catMap[r.categoryId] = (catMap[r.categoryId] || 0) + r.durationSeconds;
+            totalSec += r.durationSeconds;
+          });
+
+          if (totalSec === 0) return [];
+
+          return Object.keys(catMap).map(catId => {
+            const sec = catMap[catId];
+            const cat = categories.value.find(c => c.id === catId) || { name: '未知分类', color: '#94a3b8' };
+            const percent = Math.round((sec / totalSec) * 100);
+            return {
+              id: catId,
+              name: cat.name,
+              color: cat.color,
+              seconds: sec,
+              timeText: formatDurationText(sec),
+              percent: percent
+            };
+          }).sort((a, b) => b.seconds - a.seconds);
+        });
+
+        // ================= GitHub 风格热力图算法 =================
+        const activeHeatmapDay = ref(null);
+
+        const heatmapWeeks = computed(() => {
+          const weeks = [];
+          const now = new Date();
+          const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          
+          // 获取当前是星期几 (周一为 0, 周日为 6)
+          const currentDayOfWeek = (today.getDay() + 6) % 7; 
+          
+          // 生成最近 16 周 (16 * 7 = 112 天)
+          const totalDays = 16 * 7;
+          const startDate = new Date(today);
+          startDate.setDate(today.getDate() - (totalDays - 1 - (6 - currentDayOfWeek)));
+
+          // 将 records 按日期 YYYY-MM-DD 分组汇总时长
+          const dateMap = {};
+          records.value.forEach(r => {
+            const d = new Date(r.timestamp);
+            const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+            dateMap[key] = (dateMap[key] || 0) + r.durationSeconds;
+          });
+
+          let currentWeek = [];
+          for (let i = 0; i < totalDays; i++) {
+            const d = new Date(startDate);
+            d.setDate(startDate.getDate() + i);
+            const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+            const dur = dateMap[key] || 0;
+
+            currentWeek.push({
+              dateString: key,
+              duration: dur,
+              isFuture: d > today
+            });
+
+            if (currentWeek.length === 7) {
+              weeks.push(currentWeek);
+              currentWeek = [];
+            }
+          }
+          if (currentWeek.length > 0) weeks.push(currentWeek);
+          return weeks;
+        });
+
+        const getHeatmapColorClass = (sec) => {
+          if (!sec || sec <= 0) return 'bg-slate-100 dark:bg-slate-800/80';
+          const mins = sec / 60;
+          if (mins <= 30) return 'bg-emerald-200 dark:bg-emerald-950 ring-1 ring-emerald-500/20';
+          if (mins <= 90) return 'bg-emerald-400 dark:bg-emerald-700';
+          if (mins <= 180) return 'bg-emerald-500 dark:bg-emerald-500';
+          return 'bg-emerald-600 dark:bg-emerald-400';
+        };
+
+        // 计算连续打卡天数 Streak
+        const streakData = computed(() => {
+          const dateMap = new Set();
+          records.value.forEach(r => {
+            if (r.durationSeconds >= 60) { // 至少打卡 1 分钟算有效天
+              const d = new Date(r.timestamp);
+              const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+              dateMap.add(key);
+            }
+          });
+
+          const now = new Date();
+          const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          const formatD = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+          let current = 0;
+          let checkDate = new Date(today);
+
+          // 如果今天学了，从今天开始算；如果今天还没学，从昨天开始算
+          if (dateMap.has(formatD(checkDate))) {
+            current++;
+            checkDate.setDate(checkDate.getDate() - 1);
+          } else {
+            const yesterday = new Date(today);
+            yesterday.setDate(today.getDate() - 1);
+            if (dateMap.has(formatD(yesterday))) {
+              checkDate = yesterday;
+            }
+          }
+
+          while (dateMap.has(formatD(checkDate))) {
+            current++;
+            checkDate.setDate(checkDate.getDate() - 1);
+          }
+
+          return {
+            current: current,
+            longest: Math.max(current, Number(localStorage.getItem('focus_longest_streak')) || current)
+          };
+        });
+
+        const currentStreak = computed(() => streakData.value.current);
+        const longestStreak = computed(() => streakData.value.longest);
+
+        watch(currentStreak, (val) => {
+          const savedLongest = Number(localStorage.getItem('focus_longest_streak')) || 0;
+          if (val > savedLongest) {
+            localStorage.setItem('focus_longest_streak', val);
+          }
+        });
+
+        const getCategoryName = (catId) => {
+          const cat = categories.value.find(c => c.id === catId);
+          return cat ? cat.name : '未知科目';
+        };
+
+        const getCategoryColor = (catId) => {
+          const cat = categories.value.find(c => c.id === catId);
+          return cat ? cat.color : '#94a3b8';
+        };
+
+        const formatTimestamp = (ts) => {
+          const d = new Date(ts);
+          const hours = String(d.getHours()).padStart(2, '0');
+          const mins = String(d.getMinutes()).padStart(2, '0');
+          if (isToday(ts)) {
+            return `今天 ${hours}:${mins}`;
+          }
+          const month = d.getMonth() + 1;
+          const date = d.getDate();
+          return `${month}月${date}日 ${hours}:${mins}`;
+        };
+
+        onMounted(() => {
+          const savedTheme = localStorage.getItem('focus_theme');
+          if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            isDark.value = true;
+            document.documentElement.classList.add('dark');
+          }
+
+          // 注册 Service Worker (启用 PWA)
+          if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('./sw.js').catch(() => {});
+          }
+
+          restoreActiveSession();
+        });
+
+        onUnmounted(() => {
+          clearInterval(timerInterval);
+          soundEngine.stop();
+        });
+
+        return {
+          isDark,
+          toggleTheme,
+          isFullscreen,
+          toggleFullscreen,
+          // 目标
+          dailyGoalHours,
+          promptSetGoal,
+          todayGoalPercent,
+          // 白噪音
+          showSoundPanel,
+          currentSound,
+          currentSoundName,
+          soundOptions,
+          soundVolume,
+          selectSound,
+          stopSound,
+          onVolumeChange,
+          // 模式切换
+          timingMode,
+          switchTimingMode,
+          pomodoroMinutes,
+          pomodoroType,
+          pomodoroPhases,
+          setPomodoroPhase,
+          pomodoroFormatted,
+          pomodoroProgressPercent,
+          // 分类
+          categories,
+          selectedCategory,
+          showAddCategoryModal,
+          newCategoryName,
+          presetColors,
+          newCategoryColor,
+          addNewCategory,
+          // 计时状态
+          timerStatus,
+          statusText,
+          formattedTime,
+          currentNote,
+          startTimer,
+          pauseTimer,
+          resumeTimer,
+          confirmDiscard,
+          finishTimerManual,
+          // 热力图与连续打卡
+          heatmapWeeks,
+          getHeatmapColorClass,
+          activeHeatmapDay,
+          currentStreak,
+          longestStreak,
+          // 手动补记
+          showManualEntryModal,
+          manualCategory,
+          manualDate,
+          manualHours,
+          manualMinutes,
+          manualNote,
+          submitManualEntry,
+          // 记录与数据备份
+          records,
+          sortedRecords,
+          deleteRecord,
+          confirmClearRecords,
+          fileInputRef,
+          triggerImportFile,
+          handleImportFile,
+          exportData,
+          todayRecords,
+          todayTotalTimeText,
+          weekTotalTimeText,
+          allTimeTotalText,
+          todayCategoryDist,
+          getCategoryName,
+          getCategoryColor,
+          formatDurationText,
+          formatTimestamp
+        };
+      }
+    }).mount('#app');
+  </script>
+</body>
+</html>
