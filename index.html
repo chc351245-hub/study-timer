@@ -178,16 +178,21 @@
             </div>
           </div>
 
-          <!-- 全屏专注模式按钮 (手机端已是全屏App故隐藏) -->
+          <!-- 全屏沉浸模式按钮 (可一键铺满全屏，压制底部广告) -->
           <button 
             @click="toggleFullscreen" 
-            title="沉浸全屏模式"
-            class="hidden sm:inline-flex p-2 rounded-lg text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
-            <svg v-if="!isFullscreen" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            :title="isFullscreen ? '退出全屏' : '一键沉浸全屏 (覆盖底部广告)'"
+            :class="[
+              'p-2 rounded-xl transition flex items-center justify-center border',
+              isFullscreen 
+                ? 'border-indigo-500 bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 shadow-sm'
+                : 'border-slate-200 dark:border-slate-800 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
+            ]">
+            <svg v-if="!isFullscreen" class="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
             </svg>
-            <svg v-else class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            <svg v-else class="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600 dark:text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 9L4 4m0 0h4m-4 0v4m11 11l5 5m0 0h-4m4 0v-4m-11 0l-5 5m0 0h4m-4 0v-4m16-16l-5 5m0 0h4m-4 0v-4" />
             </svg>
           </button>
 
@@ -1081,19 +1086,30 @@
           }
         };
 
-        // 全屏模式
+        // 全屏沉浸模式（覆盖压制底栏与广告）
         const isFullscreen = ref(false);
         const toggleFullscreen = () => {
-          if (!document.fullscreenElement) {
-            document.documentElement.requestFullscreen().catch(() => {});
-            isFullscreen.value = true;
+          const docEl = document.documentElement;
+          if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+            if (docEl.requestFullscreen) {
+              docEl.requestFullscreen().catch(() => {});
+            } else if (docEl.webkitRequestFullscreen) {
+              docEl.webkitRequestFullscreen();
+            }
           } else {
             if (document.exitFullscreen) {
-              document.exitFullscreen();
-              isFullscreen.value = false;
+              document.exitFullscreen().catch(() => {});
+            } else if (document.webkitExitFullscreen) {
+              document.webkitExitFullscreen();
             }
           }
         };
+
+        const syncFullscreen = () => {
+          isFullscreen.value = Boolean(document.fullscreenElement || document.webkitFullscreenElement);
+        };
+        document.addEventListener('fullscreenchange', syncFullscreen);
+        document.addEventListener('webkitfullscreenchange', syncFullscreen);
 
         // ================= 今日学习目标 =================
         const dailyGoalHours = ref(Number(localStorage.getItem('focus_daily_goal_hours')) || 4);
@@ -1278,6 +1294,15 @@
         };
 
         const startTimer = () => {
+          // 点击开始专注时，自动尝试进入全屏沉浸（压制并覆盖底部）
+          const docEl = document.documentElement;
+          if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+            if (docEl.requestFullscreen) {
+              docEl.requestFullscreen().catch(() => {});
+            } else if (docEl.webkitRequestFullscreen) {
+              docEl.webkitRequestFullscreen();
+            }
+          }
           timerStatus.value = 'running';
           lastTimestamp = Date.now();
           saveActiveSession();
