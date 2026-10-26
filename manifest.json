@@ -1,16 +1,24 @@
 {
   "name": "专注时光 - 学习时间记录",
   "short_name": "专注时光",
+  "id": "/study-timer/",
   "description": "极简高效的个人学习与深度专注时间记录工具",
   "start_url": "./index.html",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#090d16",
   "theme_color": "#4f46e5",
   "icons": [
     {
-      "src": "./icon-512.svg",
-      "sizes": "192x192 512x512",
-      "type": "image/svg+xml",
+      "src": "./icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
       "purpose": "any maskable"
     }
   ]
