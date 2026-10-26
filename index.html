@@ -2,10 +2,11 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>专注时光 - 学习时间记录</title>
   
-  <!-- PWA 支持与图标 -->
+  <!-- PWA 支持与安全策略 -->
+  <meta name="referrer" content="no-referrer">
   <link rel="manifest" href="./manifest.json">
   <link rel="icon" type="image/png" href="./icon-192.png">
   <link rel="apple-touch-icon" href="./icon-512.png">
@@ -85,16 +86,16 @@
 
     <!-- 顶部导航栏 -->
     <header class="border-b border-slate-200/80 dark:border-slate-800/80 backdrop-blur sticky top-0 z-30 bg-white/70 dark:bg-slate-950/70">
-      <div class="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
-        <div class="flex items-center space-x-3">
-          <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center text-white shadow-md shadow-indigo-500/20">
-            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <div class="max-w-5xl mx-auto px-3 sm:px-4 h-14 sm:h-16 flex items-center justify-between">
+        <div class="flex items-center space-x-2.5">
+          <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center text-white shadow-md shadow-indigo-500/20 flex-shrink-0">
+            <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
           <div>
-            <h1 class="text-base font-bold tracking-tight">专注时光</h1>
-            <p class="text-xs text-slate-400 dark:text-slate-500">学习时间流光纪</p>
+            <h1 class="text-sm sm:text-base font-bold tracking-tight">专注时光</h1>
+            <p class="text-[10px] text-slate-400 dark:text-slate-500 hidden sm:block">学习时间流光纪</p>
           </div>
         </div>
 
@@ -207,7 +208,7 @@
     </header>
 
     <!-- 主体区域 -->
-    <main class="max-w-5xl mx-auto px-4 py-6 flex-1 w-full space-y-6">
+    <main class="max-w-5xl mx-auto px-3 sm:px-4 py-3 sm:py-6 flex-1 w-full space-y-4 sm:space-y-6">
 
       <!-- ================= 0. 今日目标进度横幅 ================= -->
       <section class="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 sm:p-5 shadow-sm">
@@ -281,7 +282,7 @@
       </div>
 
       <!-- ================= 1. 核心计时器组件 ================= -->
-      <section class="relative bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-6 sm:p-10 shadow-xl shadow-slate-200/40 dark:shadow-none overflow-hidden transition-all">
+      <section class="relative bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-4 sm:p-8 shadow-xl shadow-slate-200/40 dark:shadow-none overflow-hidden transition-all">
         
         <!-- 运行时的背景柔光 -->
         <div v-if="timerStatus === 'running'" 
@@ -358,7 +359,7 @@
           </div>
 
           <!-- 超大数字时钟展示 -->
-          <div class="my-4 font-mono font-extrabold text-6xl sm:text-8xl tracking-tight timer-digits select-none text-slate-900 dark:text-white drop-shadow-sm">
+          <div class="my-2 sm:my-4 font-mono font-extrabold text-5xl sm:text-7xl tracking-tight timer-digits select-none text-slate-900 dark:text-white drop-shadow-sm">
             <template v-if="timingMode === 'count_up'">
               <span>{{ formattedTime.hours }}</span>
               <span class="text-indigo-500 animate-pulse">:</span>
@@ -386,6 +387,7 @@
             <input 
               v-model="currentNote"
               type="text" 
+              maxlength="150"
               placeholder="记录此时在学什么？(如: 单词Unit 3 / 刷高数题...)" 
               class="w-full px-4 py-2.5 text-sm bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 text-center placeholder:text-slate-400 transition"
             />
@@ -476,19 +478,19 @@
       </section>
 
       <!-- ================= 2. GitHub 风格学习热力图 (打卡绿格子) ================= -->
-      <section class="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-5 sm:p-6 shadow-sm">
-        <div class="flex items-center justify-between mb-4">
-          <div class="flex items-center space-x-3">
-            <h3 class="text-sm font-bold text-slate-800 dark:text-slate-200 flex items-center space-x-1.5">
+      <section class="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-xl sm:rounded-2xl p-3.5 sm:p-6 shadow-sm">
+        <div class="flex items-center justify-between mb-3 sm:mb-4">
+          <div class="flex items-center space-x-2 sm:space-x-3">
+            <h3 class="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200 flex items-center space-x-1.5">
               <span>🌱 学习打卡热力图</span>
             </h3>
-            <span class="text-xs text-slate-400">最近 16 周</span>
+            <span class="text-[10px] sm:text-xs text-slate-400">近 16 周</span>
           </div>
 
           <!-- 连续打卡天数勋章 -->
-          <div class="flex items-center space-x-3 text-xs">
-            <div class="flex items-center space-x-1 bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 px-2.5 py-1 rounded-full border border-amber-200/60 dark:border-amber-800/50">
-              <span>🔥 连续打卡 <strong>{{ currentStreak }}</strong> 天</span>
+          <div class="flex items-center space-x-2 text-[10px] sm:text-xs">
+            <div class="flex items-center space-x-1 bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full border border-amber-200/60 dark:border-amber-800/50 font-medium">
+              <span>🔥 连胜 <strong>{{ currentStreak }}</strong> 天</span>
             </div>
             <span class="text-slate-400 hidden sm:inline">最高连续 {{ longestStreak }} 天</span>
           </div>
@@ -544,50 +546,50 @@
       </section>
 
       <!-- ================= 3. 统计看板卡片群 ================= -->
-      <section class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div class="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-5 shadow-sm">
-          <div class="flex items-center justify-between text-slate-400 mb-2">
-            <span class="text-xs font-medium">今日专注时长</span>
-            <svg class="w-4 h-4 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <section class="grid grid-cols-3 gap-2 sm:gap-4">
+        <div class="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-xl sm:rounded-2xl p-2.5 sm:p-5 shadow-sm text-center sm:text-left">
+          <div class="flex items-center justify-between text-slate-400 mb-1 sm:mb-2">
+            <span class="text-[10px] sm:text-xs font-medium">今日专注</span>
+            <svg class="w-3.5 h-3.5 text-indigo-500 hidden sm:block" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
-          <div class="text-2xl font-bold font-mono tracking-tight text-slate-900 dark:text-white">
+          <div class="text-base sm:text-2xl font-bold font-mono tracking-tight text-slate-900 dark:text-white truncate">
             {{ todayTotalTimeText }}
           </div>
-          <p class="text-xs text-slate-400 mt-1">今日完成 {{ todayRecords.length }} 次专注</p>
+          <p class="text-[9px] sm:text-xs text-slate-400 mt-0.5 truncate">{{ todayRecords.length }} 次打卡</p>
         </div>
 
-        <div class="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-5 shadow-sm">
-          <div class="flex items-center justify-between text-slate-400 mb-2">
-            <span class="text-xs font-medium">最近 7 天总计</span>
-            <svg class="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div class="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-xl sm:rounded-2xl p-2.5 sm:p-5 shadow-sm text-center sm:text-left">
+          <div class="flex items-center justify-between text-slate-400 mb-1 sm:mb-2">
+            <span class="text-[10px] sm:text-xs font-medium">最近 7 天</span>
+            <svg class="w-3.5 h-3.5 text-emerald-500 hidden sm:block" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
             </svg>
           </div>
-          <div class="text-2xl font-bold font-mono tracking-tight text-slate-900 dark:text-white">
+          <div class="text-base sm:text-2xl font-bold font-mono tracking-tight text-slate-900 dark:text-white truncate">
             {{ weekTotalTimeText }}
           </div>
-          <p class="text-xs text-slate-400 mt-1">坚持学习的每一天都算数</p>
+          <p class="text-[9px] sm:text-xs text-slate-400 mt-0.5 truncate">周累计时长</p>
         </div>
 
-        <div class="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-5 shadow-sm">
-          <div class="flex items-center justify-between text-slate-400 mb-2">
-            <span class="text-xs font-medium">历史累计专注</span>
-            <svg class="w-4 h-4 text-violet-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div class="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-xl sm:rounded-2xl p-2.5 sm:p-5 shadow-sm text-center sm:text-left">
+          <div class="flex items-center justify-between text-slate-400 mb-1 sm:mb-2">
+            <span class="text-[10px] sm:text-xs font-medium">历史累计</span>
+            <svg class="w-4 h-4 text-violet-500 hidden sm:block" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
             </svg>
           </div>
-          <div class="text-2xl font-bold font-mono tracking-tight text-slate-900 dark:text-white">
+          <div class="text-base sm:text-2xl font-bold font-mono tracking-tight text-slate-900 dark:text-white truncate">
             {{ allTimeTotalText }}
           </div>
-          <p class="text-xs text-slate-400 mt-1">累计打卡 {{ records.length }} 次</p>
+          <p class="text-[9px] sm:text-xs text-slate-400 mt-0.5 truncate">共 {{ records.length }} 次</p>
         </div>
       </section>
 
       <!-- 科目分布条形图 -->
-      <section v-if="records.length > 0" class="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-5 sm:p-6 shadow-sm">
-        <h3 class="text-sm font-semibold mb-4 text-slate-700 dark:text-slate-300">📊 今日科目分布</h3>
+      <section v-if="records.length > 0" class="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-xl sm:rounded-2xl p-3.5 sm:p-6 shadow-sm">
+        <h3 class="text-xs sm:text-sm font-semibold mb-3 text-slate-700 dark:text-slate-300">📊 今日科目分布</h3>
         <div v-if="todayRecords.length === 0" class="text-xs text-slate-400 py-3 text-center">今天还没有打卡记录，开始专注一次吧！</div>
         <div v-else class="space-y-3">
           <div class="w-full h-3 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 flex">
@@ -610,7 +612,7 @@
       </section>
 
       <!-- ================= 4. 详细记录列表 + 手动补记 ================= -->
-      <section class="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-5 sm:p-6 shadow-sm">
+      <section class="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-xl sm:rounded-2xl p-3.5 sm:p-6 shadow-sm">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
           <div class="flex items-center space-x-2">
             <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-300">📝 专注记录明细</h3>
@@ -747,6 +749,7 @@
             <input 
               v-model="manualNote" 
               type="text" 
+              maxlength="150"
               placeholder="如：图书馆高数复习..." 
               class="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
             />
@@ -779,6 +782,7 @@
             <input 
               v-model="newCategoryName" 
               type="text" 
+              maxlength="20"
               placeholder="如：物理、考研背单词、吉他..." 
               class="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
               @keyup.enter="addNewCategory"
@@ -818,7 +822,7 @@
     </div>
 
     <!-- 底部版权/提示 -->
-    <footer class="py-6 text-center text-xs text-slate-400 dark:text-slate-600 border-t border-slate-200/50 dark:border-slate-800/50">
+    <footer class="py-4 sm:py-6 text-center text-xs text-slate-400 dark:text-slate-600 border-t border-slate-200/50 dark:border-slate-800/50 pb-10 sm:pb-6">
       <p>💡 支持 PWA：手机浏览器点击“添加到主屏幕”即可作为 App 使用 · 标签页标题实时同步</p>
     </footer>
 
@@ -1040,6 +1044,25 @@
 
     const soundEngine = new AmbientSoundEngine();
 
+    // 安全存储辅助工具（防数据损坏与隐身模式奔溃）
+    const safeGetStorage = (key, fallback) => {
+      try {
+        const item = localStorage.getItem(key);
+        return item ? JSON.parse(item) : fallback;
+      } catch (e) {
+        console.warn(`[Storage] Failed to read ${key}:`, e);
+        return fallback;
+      }
+    };
+
+    const safeSetStorage = (key, val) => {
+      try {
+        localStorage.setItem(key, typeof val === 'string' ? val : JSON.stringify(val));
+      } catch (e) {
+        console.error(`[Storage] Failed to save ${key}:`, e);
+      }
+    };
+
     // ==========================================
     // Vue 3 应用主逻辑
     // ==========================================
@@ -1051,10 +1074,10 @@
           isDark.value = !isDark.value;
           if (isDark.value) {
             document.documentElement.classList.add('dark');
-            localStorage.setItem('focus_theme', 'dark');
+            safeSetStorage('focus_theme', 'dark');
           } else {
             document.documentElement.classList.remove('dark');
-            localStorage.setItem('focus_theme', 'light');
+            safeSetStorage('focus_theme', 'light');
           }
         };
 
@@ -1184,7 +1207,7 @@
           { id: 'read', name: '📚 自由阅读', color: '#ec4899' },
           { id: 'other', name: '☕ 其它自律', color: '#8b5cf6' },
         ];
-        const categories = ref(JSON.parse(localStorage.getItem('focus_categories')) || defaultCategories);
+        const categories = ref(safeGetStorage('focus_categories', defaultCategories));
         const selectedCategory = ref(categories.value[0]?.id || 'dev');
 
         const showAddCategoryModal = ref(false);
@@ -1193,15 +1216,16 @@
         const newCategoryColor = ref(presetColors[0]);
 
         const addNewCategory = () => {
-          if (!newCategoryName.value.trim()) return;
+          const trimmed = newCategoryName.value.trim().slice(0, 20);
+          if (!trimmed) return;
           const newCat = {
             id: 'cat_' + Date.now(),
-            name: newCategoryName.value.trim(),
+            name: trimmed,
             color: newCategoryColor.value
           };
           categories.value.push(newCat);
           selectedCategory.value = newCat.id;
-          localStorage.setItem('focus_categories', JSON.stringify(categories.value));
+          safeSetStorage('focus_categories', categories.value);
           newCategoryName.value = '';
           showAddCategoryModal.value = false;
         };
@@ -1362,7 +1386,7 @@
         };
 
         // ================= 记录与完成打卡 =================
-        const records = ref(JSON.parse(localStorage.getItem('focus_records')) || []);
+        const records = ref(safeGetStorage('focus_records', []));
 
         const triggerCelebration = () => {
           soundEngine.playChime();
@@ -1473,34 +1497,70 @@
           if (fileInputRef.value) fileInputRef.value.click();
         };
 
+        // 安全清洗与校验导入的记录对象
+        const sanitizeRecord = (r) => {
+          if (!r || typeof r !== 'object') return null;
+          const duration = Math.max(1, Math.min(86400, parseInt(r.durationSeconds, 10) || 0));
+          const timestamp = parseInt(r.timestamp, 10) || Date.now();
+          const categoryId = String(r.categoryId || 'other').slice(0, 32);
+          const note = String(r.note || '').slice(0, 150);
+          const mode = ['count_up', 'pomodoro', 'manual'].includes(r.mode) ? r.mode : 'count_up';
+          return {
+            id: String(r.id || 'rec_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5)).slice(0, 64),
+            categoryId,
+            durationSeconds: duration,
+            mode,
+            isManual: Boolean(r.isManual),
+            note,
+            timestamp
+          };
+        };
+
         const handleImportFile = (e) => {
           const file = e.target.files[0];
           if (!file) return;
+
+          // 限制备份文件最大 10MB，防止恶意大文件导致内存溢出
+          if (file.size > 10 * 1024 * 1024) {
+            alert('文件体积过大，请选择 10MB 以内的备份文件！');
+            e.target.value = '';
+            return;
+          }
 
           const reader = new FileReader();
           reader.onload = (evt) => {
             try {
               const data = JSON.parse(evt.target.result);
               if (Array.isArray(data.records)) {
-                const isMerge = confirm('检测到备份数据！\n点击【确定】合并已有数据，点击【取消】完全覆盖当前数据。');
+                // 安全过滤与规范化
+                const validRecords = data.records.map(sanitizeRecord).filter(Boolean);
+                const isMerge = confirm(`检测到 ${validRecords.length} 条有效记录！\n点击【确定】合并已有数据\n点击【取消】完全覆盖当前数据。`);
+                
                 if (isMerge) {
                   const existingIds = new Set(records.value.map(r => r.id));
-                  const newItems = data.records.filter(r => !existingIds.has(r.id));
+                  const newItems = validRecords.filter(r => !existingIds.has(r.id));
                   records.value = [...newItems, ...records.value];
                 } else {
-                  records.value = data.records;
+                  records.value = validRecords;
                 }
+
                 if (Array.isArray(data.categories) && data.categories.length > 0) {
-                  categories.value = data.categories;
-                  localStorage.setItem('focus_categories', JSON.stringify(categories.value));
+                  const cleanCats = data.categories.map(c => ({
+                    id: String(c.id).slice(0, 32),
+                    name: String(c.name).slice(0, 20),
+                    color: String(c.color || '#6366f1').slice(0, 16)
+                  }));
+                  categories.value = cleanCats;
+                  safeSetStorage('focus_categories', categories.value);
                 }
-                localStorage.setItem('focus_records', JSON.stringify(records.value));
-                alert(`成功导入 ${data.records.length} 条记录！`);
+
+                safeSetStorage('focus_records', records.value);
+                alert(`安全校验完成，成功导入 ${validRecords.length} 条记录！`);
               } else {
-                alert('备份文件格式不正确！');
+                alert('备份文件格式不符合规范！');
               }
             } catch (err) {
-              alert('解析备份文件失败：' + err.message);
+              alert('解析备份文件失败：数据格式损坏或包含非法字符');
             }
           };
           reader.readAsText(file);
