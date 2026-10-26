@@ -84,8 +84,8 @@
       class="hidden" 
     />
 
-    <!-- 顶部导航栏 -->
-    <header class="border-b border-slate-200/80 dark:border-slate-800/80 backdrop-blur sticky top-0 z-30 bg-white/70 dark:bg-slate-950/70">
+    <!-- 顶部导航栏 (手机端增加状态栏安全边距防贴顶) -->
+    <header class="border-b border-slate-200/80 dark:border-slate-800/80 backdrop-blur sticky top-0 z-30 bg-white/70 dark:bg-slate-950/70 pt-[max(env(safe-area-inset-top),28px)] sm:pt-0">
       <div class="max-w-5xl mx-auto px-3 sm:px-4 h-14 sm:h-16 flex items-center justify-between">
         <div class="flex items-center space-x-2.5">
           <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center text-white shadow-md shadow-indigo-500/20 flex-shrink-0">
@@ -178,11 +178,11 @@
             </div>
           </div>
 
-          <!-- 全屏专注模式按钮 -->
+          <!-- 全屏专注模式按钮 (手机端已是全屏App故隐藏) -->
           <button 
             @click="toggleFullscreen" 
             title="沉浸全屏模式"
-            class="p-2 rounded-lg text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+            class="hidden sm:inline-flex p-2 rounded-lg text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
             <svg v-if="!isFullscreen" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
             </svg>
